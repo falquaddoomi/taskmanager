@@ -1,0 +1,122 @@
+<table cellpadding="0" cellspacing="0" style="min-height: 300px; width: 100%; height: 100%; border: solid 1px gray;">
+	<tr>
+
+	<td id="schedule_column" valign="top" class="column" width="33%" style="border-right: solid 1px #999;">
+		<div class="col_header">
+		Scheduled
+		</div>
+
+		<div class="itemlist">
+			<table cellpadding="0" cellspacing="0" class="task_list">
+				{% for process in pending_processes %}
+				<tr>
+					<td style="width: 60px; padding-right: 0px;">
+						<div class="task_status pending">pending</div>
+					</td>
+
+					<td>
+					<b>{{ process.name }}</b>
+					<div class="subtext">scheduled for {{ process.schedule_date|date }}, {{ process.schedule_date|time }}</div>
+					</td>
+
+					<td class="command" style="text-align: right;">
+						<a href="#">x</a>
+					</td>
+				</tr>
+				{% endfor %}
+			</table>
+		</div>
+	</div>
+
+	<td id="running_column" valign="top" class="column" width="33%" style="border-right: solid 1px #999;">
+		<div class="col_header">
+		Running
+		</div>
+
+		<div class="itemlist">
+			<table cellpadding="0" cellspacing="0" class="task_list" style="width: 98%;">
+				{% for process in current_processes %}
+				<tr>
+					<td style="width: 60px; padding-right: 0px;">
+						<div class="task_status running">running</div>
+					</td>
+
+					<td>
+					<b>{{ process.name }}</b>
+					<div class="subtext">state: {{ process.state }}</div>
+					</td>
+
+					<td style="text-align: right;"></td>
+				</tr>
+				{% endfor %}
+			</table>
+		</div>
+	</div>
+
+	<td id="results_column" valign="top" class="column" width="33%">
+		<div class="col_header">
+		Completed
+		</div>
+
+		<div class="itemlist" style="border-right: none;">
+			<table cellpadding="0" cellspacing="0" class="task_list" style="width: 98%;">
+				{% for process in completed_processes %}
+				<tr>
+					<td style="width: 60px; padding-right: 0px;">
+						<div class="task_status past">complete</div>
+					</td>
+
+					<td>
+					<b>{{ process.name }}</b>
+					<div class="subtext">completed on {{ process.completed_date|date }}, {{ process.completed_date|time }}</div>
+					</td>
+
+					<td style="text-align: right;"></td>
+				</tr>
+				{% endfor %}
+			</table>
+		</div>
+	</div>
+
+	</tr>
+</table>
+
+<!--
+========================================
+=== the land of hidden divs
+========================================
+-->
+
+<div id="schedule_add_dialog" class="column_dialog">
+	<form id="scheduler_form" action="{% url taskmanager.views.add_scheduled_task %}" method="POST">
+		<div style="font-weight: bold; font-family: Verdana, sans-serif; font-size: 22px; margin-bottom: 0.5em;">
+		Schedule a Process
+		</div>
+
+		<input type="hidden" name="return_page" value="{{ current_page }}" />
+		<input type="hidden" name="patient" value="{{ selected_patientid }}" />
+
+		{% if error_msg %}
+		<div class="errorbox">
+			<b>error:</b> {{ error_msg }}
+		</div>
+		{% endif %}
+
+		<table class="vertical">
+			<tr><td class="label">Task:</td><td>
+				<select class="dropper" name="task">
+				{% for task in machines %}
+					<option value="{{ task.id }}">{{ task.name }}</option>
+				{% endfor %}
+				</select>
+			</td></tr>
+
+			<tr><td class="label" style="position: relative;">Date:</td><td>
+				<input type="text" id="date_picker" name="date">
+				<input type="text" id="time_picker" name="time">
+			</td></tr>
+
+			<tr><td class="label">&nbsp;</td><td align="right"><input type="submit" name="schedule" value="Schedule"></td></tr>
+		</table>
+	</form>
+</div>

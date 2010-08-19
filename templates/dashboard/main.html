@@ -1,0 +1,302 @@
+{% extends "dashboard/layout.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block header %}Task Manager :: Dashboard{% endblock %}
+
+{% block styles %}
+	body { margin: 0px; padding: 0px; }
+	body, table { font-family: Tahoma, sans-serif; font-size: 12px; }
+
+	.selector_assembly {
+		padding: 20px;
+		padding-right: 25px;
+	}
+
+	.column_container {
+		width: 100%; overflow: hidden;
+		border: solid 1px gray;
+		background: white;
+	}
+
+	.column {
+		min-height: 300px;
+	}
+
+	.column .col_header { background: #ccc; font-weight: bold; font-size: 24px; padding: 10px; border-bottom: solid 3px gray; min-width: 220px; }
+	.column .bin {
+		padding: 10px; background: #ccc; border-top: solid 1px gray;
+		font-weight: bold; position: absolute; left: 0px; right: 0px; bottom: 0px; height: 1em;
+	}
+
+	.column .itemlist { background: white; }
+	.column .itemlist .command a {
+		height: 12px; width: 15px;
+		display: block; background: #ccc; color: #777;
+		padding: 4px;
+		-moz-border-radius: 5px; -webkit-border-radius: 5px; border-radius: 5px;
+		text-decoration: none; font-size: 10px; font-weight: bold;
+		text-align: center;
+	}
+
+	.column .itemlist .command a:hover {
+		background: #F5EC89;
+	}
+
+	.chooser a { display: block; padding: 10px; text-decoration: none; color: black; }
+	.chooser a:hover { background: #E3EFF3; }
+	.chooser a.selected { background: #0D436F; color: white; font-weight: bold; }
+	.chooser a .address_box { font-size: 10px; color: #555; }
+	.chooser a.selected .address_box { color: #ccc; }
+
+	/* commands */
+	.col_command { padding: 5px; }
+	.command_header {
+		padding: 15px; font-weight: bold; padding-left: 50px; font-size: 14px; background: #ddd;
+		-moz-border-radius: 5px; -webkit-border-radius: 5px;
+		cursor: pointer;
+	}
+	.command_options { display: none; background: #eee; position: relative; top: -5px; }
+
+	/* icon assignments */
+	#users_column { width: 100%; }
+	#users_column .col_header { background: #ccc url('/static/taskmanager/icons/Users.png') no-repeat 5px center; padding-left: 45px; }
+	#users_column .choosable { background-image: url('/static/taskmanager/icons/User.png'); background-repeat: no-repeat; background-position: 5px center; padding-left: 45px; }
+
+	#schedule_column .col_header { background: #ccc url('/static/taskmanager/icons/Internet%20History.png') no-repeat 5px center; padding-left: 45px; }
+	#running_column .col_header { background: #ccc url('/static/taskmanager/icons/Appointment%20Urgent.png') no-repeat 5px center; padding-left: 45px; }
+	#results_column .col_header { background: #ccc url('/static/taskmanager/icons/Appointment%20Cool.png') no-repeat 5px center; padding-left: 45px; }
+
+	/* specific column commands */
+	#schedule_add_cmd .command_header {
+		background-image: url('/static/taskmanager/icons/Add%20Appointment.png');
+		background-repeat: no-repeat; background-position: 10px center;
+	}
+
+	/* task lists */
+	.task_list td { padding: 10px; }
+	.task_list .subtext { padding-left: 1em; font-size: smaller; }
+
+	/* page structure */
+	.structural { width: 100%; }
+	.structural td.outer { padding: 5px; }
+	.structural #user_cell { width: 300px; }
+
+	/* mini navbar */
+	.nav_cell .nav_option {
+		display: inline-block; width: 100px; background: #ddd;
+		padding: 5px; padding-left: 10px; margin-right: 5px;
+		-moz-border-radius: 5px; -webkit-border-radius: 5px;
+	}
+
+	.nav_cell .nav_option.selected {
+		background: #fdf; font-weight: bold;
+	}
+
+	/* tabs */
+	.tabrow td { padding: 0px; margin: 0px; }
+
+	/* header commands */
+	.header_command {
+		background: #bbb; position: absolute;
+		right: 0px; top: 0px; bottom: 0px;
+		padding: 8px 12px; border-left: solid 1px #999;
+	}
+	.header_command.selected {
+		border: solid 3px gray; background: white;
+		border-bottom: none; bottom: -3px;
+		padding: 5px 9px;
+	}
+
+	.column_dialog {
+		background: white; border: solid 3px gray; border-top: none;
+		position: absolute; padding: 10px; display: none;
+	}
+{% endblock %}
+
+{% block scripts %}
+	// bind up schedule insertion function
+	//
+	$(document).ready(function() {
+		// make the time/date picker
+		//
+		$('#date_picker').calendricalDate({ usa: true });
+		$('#time_picker').calendricalTime({ usa: true });
+
+		// bind up form validation checker
+		//
+		$("form#scheduler_form").submit(function() {
+			var $date_picker = $("#date_picker");
+			var $time_picker = $("#time_picker");
+
+			if ($date_picker.val() == "" || $time_picker.val() == "") {
+				// show error message
+				if ($date_picker.val() == "")
+					$date_picker.addClass("invalid_field");
+				else
+					$date_picker.removeClass("invalid_field");
+
+				if ($time_picker.val() == "")
+					$time_picker.addClass("invalid_field");
+				else
+					$time_picker.removeClass("invalid_field");
+
+				return false;
+			}
+		});
+
+		// bind up pointless chooser junk
+		//
+		$(".chooser").each(function() {
+			var $items = $(this).find(".choosable");
+			var $parent = $(this).closest(".column");
+
+			$items.click(function(event) {
+				$items.removeClass("selected");
+				$(this).addClass("selected");
+				$parent.trigger("selected", [$(this)]);
+
+				// event.preventDefault();
+				// event.stopPropogation();
+			});
+		});
+
+		$(".column").bind("populated", function(event, data) {
+			// first, clear our internal selection
+		});
+
+		$("#users_column").bind("selected", function(event, $selected) {
+			// do something when they choose a user
+			// alert("You selected: " + $selected.text());
+		});
+
+		$("#schedule_add_cmd .command_header").live('click', function() {
+			$(this).parent().find(".command_options").slideToggle();
+		});
+
+		// make table full remaining height of page
+		//
+		/*
+		var $structural = $(".structural");
+		$structural.css("height", $(document).height() - $structural.offset().top);
+		*/
+
+		// AJAX stuff
+
+		$("#refresh_section").click(function() {
+			var returned = false;
+
+			setTimeout(function() {
+				if (!returned)
+					$('#section_holder').block({ message: null });
+			}, 100);
+
+			$.ajax({
+				url: "/taskmanager/patients/{{ selected_patientid }}/{{ section }}/",
+				dataType: "html",
+				success: function(data) {
+					returned = true;
+					$("#section_holder").html(data);
+					$("#section_holder").unblock();
+				}
+			});
+		});
+
+		// bind up schedule form adder thing
+		$("#schedule_show_add_btn").live('click', function() {
+			var $dialog = $("#schedule_add_dialog");
+			var $header = $("#schedule_column .col_header");
+			var xpadding = ($dialog.outerWidth() - $dialog.width());
+			var ypadding = ($dialog.outerHeight() - $dialog.height());
+
+			if ($dialog.is(":hidden")) {
+				$(this).addClass("selected");
+
+				$dialog.css({
+					'top':  $header.offset().top + $header.outerHeight(),
+					'left': $header.offset().left,
+					'width': $header.outerWidth() - xpadding
+					/* 'height': $("#schedule_column").outerHeight() - $header.outerHeight() - ypadding */
+				}).slideDown();
+			}
+			else {
+				$(this).removeClass("selected");
+				$dialog.fadeOut();
+			}
+		});
+	});
+{% endblock %}
+
+{% block content %}
+	<!--
+	<div class="header" style="margin-bottom: 0.5em;">&#149; manage users and tasks:</div>
+	-->
+
+	<table class="structural" cellpadding="0" cellspacing="0">
+		<tr class="tabrow">
+			<td valign="bottom">
+				<ul id="tabnav"></ul>
+			</td>
+
+			<td valign="bottom">
+				<ul id="tabnav">
+					{% if selected_patientid %}
+					<li class="tab1"><a href="/taskmanager/patients/{{ selected_patientid }}/profile/">User Info</a></li>
+					<li class="tab2"><a href="/taskmanager/patients/{{ selected_patientid }}/processes/">Processes</a></li>
+					<li class="tab3"><a href="/taskmanager/patients/{{ selected_patientid }}/tasks/">Tasks</a></li>
+					{% else %}
+					<li class="tab1"><a href="javascript:void(0)">User Info</a></li>
+					<li class="tab2"><a href="javascript:void(0)">Processes</a></li>
+					<li class="tab3"><a href="javascript:void(0)">Tasks</a></li>
+					{% endif %}
+				</ul>
+			</td>
+		</tr>
+
+		<tr>
+			<td valign="top" id="user_cell" class="outer">
+				<div class="column_container">
+					<div id="users_column" class="column">
+						<div class="col_header">
+						Users
+						</div>
+
+						<div class="itemlist chooser" style="min-height: 300px;">
+							{% for patient in patients %}
+							<a class="{% if patient.id|lower == selected_patientid|lower %}selected{% endif %} choosable" href="/taskmanager/patients/{{ patient.id }}/{{ section|default:'tasks' }}">
+								{{ patient.first_name }} {{ patient.last_name }}
+								<div class="address_box">{{ patient.address }}</div>
+							</a>
+							{% endfor %}
+						</div>
+					</div>
+				</div>
+			</td>
+
+			<td valign="top" id="content_cell" class="outer">
+				{% if selected_patientid %}
+				<div id="section_holder">
+				{% include section_url %}
+				</div>
+
+				<div style="text-align: right;">
+					<a id="refresh_section" href="javascript:void(0)">refresh</a>
+				</div>
+				{% else %}
+				<table cellpadding="0" cellspacing="0" style="min-height: 300px; width: 100%; border: solid 1px gray;">
+					<tr>
+						<td valign="top" class="column">
+							<div class="col_header">&nbsp;</div>
+						</td>
+					</tr>
+
+					<tr>
+						<td>
+							<div style="min-height: 300px; background: url('/static/taskmanager/images/diagonal-gray.png');"></div>
+						</td>
+					</tr>
+				</table>
+				{% endif %}
+			</td>
+		</tr>
+	</table>
+{% endblock %}
