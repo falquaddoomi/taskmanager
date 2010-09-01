@@ -11,6 +11,7 @@ from django.core.management.base import BaseCommand, CommandError
 from taskmanager.models import *
 
 TARGET_SERVER = 'http://localhost:8001/taskmanager/exec'
+TARGET_TIMEOUT_SERVER = 'http://localhost:8001/taskmanager/timeout'
 
 class HTTPCommandBase(resource.Resource):
     isLeaf = False
@@ -31,7 +32,7 @@ class HTTPStatusCommand(resource.Resource):
     def __init__(self):
         resource.Resource.__init__(self)
 
-    def showStatus(self, all_tasks=False):
+    def showStatus(self, all_tasks=True):
         out = "<table>"
         out += "<tr class='header'><td>ID</td><td>Target</td><td>Arguments</td><td>Schedule Date</td><td>Completed</td></tr>"
         
@@ -103,15 +104,22 @@ def task_finished(response, sched_taskid):
     t.result = response.code
     t.completed_date = datetime.now()
     t.save()
-    print "- finished %d w/code %s" % (sched_taskid, str(response.code))
+    print "- finished %s (%d) w/code %s" % (t.task.name, sched_taskid, str(response.code))
 
 def task_errored(response, sched_taskid):
     t = ScheduledTask.objects.get(pk=sched_taskid)
-    t.completed = False
     t.result = response.getErrorMessage()
-    t.completed_date = datetime.now()
     t.save()
-    print "- errored out on task %d, reason: %s" % (sched_taskid, response.getErrorMessage())
+    print "- errored out on task %s (%d), reason: %s" % (t.task.name, sched_taskid, response.getErrorMessage())
+    response.printTraceback()
+
+def session_timeout_finished(response, sessionid):
+    t = Session.objects.get(pk=sessionid)
+    print "- timed out %s (%d) w/code %s" % (t.task.name, sessionid, str(response.code))
+
+def session_timeout_errored(response, sessionid):
+    t = Session.objects.get(pk=sessionid)
+    print "- errored out on timing out %s (%d), reason: %s" % (t.task.name, sessionid, response.getErrorMessage())
     response.printTraceback()
 
 def check_schedule():
@@ -120,10 +128,10 @@ def check_schedule():
     
     tasks = ScheduledTask.objects.get_due_tasks()
     
-    for sched_task in tasks:
+    for sched_task in tasks[0:1]:
         agent = Agent(reactor)
         
-        print "Executing task: ", sched_task.task.name
+        print "Executing task: %s (%d)" % (sched_task.task.name, sched_task.id)
 
         payload_dict = {
             'patient': sched_task.patient.id,
@@ -151,6 +159,39 @@ def check_schedule():
     # run again in a bit
     reactor.callLater(5, check_schedule)
 
+def check_timeouts():
+    # the server we should poke, defined at the top of this file
+    global TARGET_TIMEOUT_SERVER
+    
+    sessions = Session.objects.get_timedout_sessions()
+    
+    for session in sessions:
+        agent = Agent(reactor)
+        
+        print "Timing out session: %s (%d)" % (session.task.name, session.id)
+
+        payload_dict = {
+            'patient': session.patient.id,
+            'session': session.id
+            }
+
+        payload = "&".join(map(lambda x: "%s=%s" % (x, payload_dict[x]), payload_dict))
+
+        d = agent.request(
+            'POST',
+            TARGET_TIMEOUT_SERVER,
+            Headers({
+                    "Content-Type": ["application/x-www-form-urlencoded"],
+                    "Content-Length": [str(len(payload))]
+                    }),
+            StringProducer(payload))
+
+        d.addCallback(session_timeout_finished, sessionid=session.id)
+        d.addErrback(session_timeout_errored, sessionid=session.id)
+        
+    # run again in a bit
+    reactor.callLater(5, check_timeouts)
+
 def main(port=8080):
     # construct the resource tree
     root = HTTPCommandBase()
@@ -161,6 +202,7 @@ def main(port=8080):
     
     site = server.Site(root)
     reactor.callLater(3, check_schedule)
+    reactor.callLater(5, check_timeouts)
     reactor.listenTCP(int(port), site)
     reactor.run()
 

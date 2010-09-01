@@ -1,12 +1,14 @@
-<table cellpadding="0" cellspacing="0" style="min-height: 300px; width: 100%; height: 100%; border: solid 1px gray;">
+<table cellpadding="0" cellspacing="0" class="tasks_view_table" style="min-height: 300px; width: 100%; height: 100%; border: solid 1px gray;">
 	<tr>
 
 	<td id="schedule_column" valign="top" class="column" width="33%" style="border-right: solid 1px #999;">
 		<div class="col_header" style="position: relative;">
-		Scheduled
-		<a id="schedule_show_add_btn" class="header_command" href="#" alt="Schedule a Task">
-			<img src="/static/taskmanager/icons/Add%20Green%20Button.png" border="0" />
-		</a>
+			Scheduled
+			<!--
+			<a id="schedule_show_add_btn" class="header_command" href="#" alt="Schedule a Task">
+				<img src="/static/taskmanager/icons/Add%20Green%20Button.png" border="0" />
+			</a>
+			-->
 		</div>
 
 		<div class="itemlist">
@@ -20,50 +22,16 @@
 					<td>
 					<b>{{ task.task.name }}</b>
 					<div class="subtext">scheduled for {{ task.schedule_date|date }}, {{ task.schedule_date|time }}</div>
+					{% if task.process %}<div class="subtext process_parent"><b>process:</b> {{ task.process }}</div>{% endif %}
 					</td>
 
 					<td class="command" style="text-align: right;">
-						<a href="#" onclick="$(this).closest('tr').find('td').fadeOut(100);">x</a>
+						<a href="/taskmanager/tasks/{{ task.id }}/details/" rel="facebox">details</a>
 					</td>
 				</tr>
 				{% endfor %}
 			</table>
 		</div>
-
-		<!--
-		<div id="schedule_add_cmd" class="col_command">
-			<div class="command_header">schedule a task...</div>
-			<div class="command_options">
-				<form id="scheduler_form" action="{% url taskmanager.subviews.dashboard.add_scheduled_task %}" method="POST">
-					<input type="hidden" name="return_page" value="{{ current_page }}" />
-					<input type="hidden" name="patient" value="{{ selected_patientid }}" />
-
-					{% if error_msg %}
-					<div class="errorbox">
-						<b>error:</b> {{ error_msg }}
-					</div>
-					{% endif %}
-
-					<table class="vertical">
-						<tr><td class="label">Task:</td><td>
-							<select class="dropper" name="task">
-							{% for task in machines %}
-								<option value="{{ task.id }}">{{ task.name }}</option>
-							{% endfor %}
-							</select>
-						</td></tr>
-
-						<tr><td class="label">Date:</td><td>
-							<input type="text" id="date_picker" name="scheduled_date">
-							<input type="text" id="time_picker" name="scheduled_time">
-						</td></tr>
-
-						<tr><td class="label">&nbsp;</td><td align="right"><input type="submit" name="schedule" value="Schedule"></td></tr>
-					</table>
-				</form>
-			</div>
-		</div>
-		-->
 	</td>
 
 	<td id="running_column" valign="top" class="column" width="33%" style="border-right: solid 1px #999;">
@@ -82,9 +50,12 @@
 					<td>
 					<b>{{ session.task.name }}</b>
 					<div class="subtext">state: {{ session.state }}</div>
+					{% if session.process %}<div class="subtext process_parent"><b>process:</b> {{ session.process }}</div>{% endif %}
 					</td>
 
-					<td style="text-align: right;"></td>
+					<td class="command" style="text-align: right;">
+						<a href="/taskmanager/sessions/{{ session.id }}/details/" rel="facebox">details</a>
+					</td>
 				</tr>
 				{% endfor %}
 			</table>
@@ -107,10 +78,11 @@
 					<td>
 					<b>{{ session.task.name }}</b>
 					<div class="subtext">completed on {{ session.completed_date|date }}, {{ session.completed_date|time }}</div>
+					{% if session.process %}<div class="subtext process_parent"><b>process:</b> {{ session.process }}</div>{% endif %}
 					</td>
 
 					<td class="command" style="text-align: right;">
-						<a href="#" onclick="$(this).closest('tr').find('td').fadeOut(100);">x</a>
+						<a href="/taskmanager/sessions/{{ session.id }}/details/" rel="facebox">details</a>
 					</td>
 				</tr>
 				{% endfor %}
@@ -150,8 +122,8 @@
 			</td></tr>
 
 			<tr><td class="label" style="position: relative;">Date:</td><td>
-				<input type="text" id="date_picker" name="scheduled_date">
-				<input type="text" id="time_picker" name="scheduled_time">
+				<input type="text" class="date_picker" name="scheduled_date" />
+				<input type="text" class="time_picker" name="scheduled_time" />
 			</td></tr>
 
 			<tr><td class="label">&nbsp;</td><td align="right"><input type="submit" name="schedule" value="Schedule"></td></tr>

@@ -24,15 +24,17 @@ class BaseMachine(object):
         self.router = router
         self.session = session
         self.patient = patient
-        try:
-            self.args = json.loads(args)
-        except:
-            self.args = None
+        self.args = json.loads(args)
         self.state = "idle"
 
     def start(self):
         # allow our machine to take initiative
         pass
+
+    def timeout(self):
+        # allow our machine to react to timeouts
+        # by default let's just stop running if we time out
+        return None
 
     def handle(self, message):
         # allow the message to pass on unhandled by default
@@ -42,6 +44,10 @@ class BaseMachine(object):
         if self.state is None:
             return "undefined"
         return self.state
+
+    def set_timeout(self, timeout_date):
+        self.session.timeout_date = timeout_date
+        self.session.save()
 
     # static helper method for scheduling tasks
     def schedule_task(self, taskname, date, arguments={}):
@@ -53,3 +59,12 @@ class BaseMachine(object):
             schedule_date = date
         )
         nt.save()
+
+    # static helper for logging
+    def log_message(self, message, outgoing):
+        nm = SessionMessage(
+            session = self.session,
+            message=message,
+            outgoing=outgoing
+            )
+        nm.save()

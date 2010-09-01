@@ -1,13 +1,20 @@
 import rapidsms
-import machine
+import machine, appt_machine
 
-from datetime import datetime
+from django.template import Context, Template
+
+from datetime import datetime, timedelta
 import parsedatetime.parsedatetime as pdt
 import parsedatetime.parsedatetime_consts as pdc
 
-class AppointmentFollowupMachine(machine.BaseMachine):
+from taskmanager.models import *
+
+# to access the reschedule() method
+from appt_request import AppointmentRequestMachine
+
+class AppointmentFollowupMachine(appt_machine.BaseAppointmentMachine):
     def __init__(self, session, router, patient, args):
-        super(AppointmentRequestMachine, self).__init__(session, router, patient, args)
+        super(AppointmentFollowupMachine, self).__init__(session, router, patient, args)
 
         # init our dispatch table 
         self.state_dispatch = {
@@ -19,17 +26,25 @@ class AppointmentFollowupMachine(machine.BaseMachine):
         # we assume that we have a reference to the patient
         # send them a nice greeting message
         conn = rapidsms.connection.Connection(self.router.get_backend('email'), self.patient.address)
-        msg = rapidsms.message.EmailMessage(connection=conn)
-        msg.subject = "Appointment Reminder"
-        msg.text = """Hello, %s. Just letting you know that you scheduled an appointment for %s.
-You don't have to respond if you're ok with that date.
-If you'd like to reschedule, text me back a new date. If you'd like to cancel, text me back 'cancel' or 'no'.
-        """ % (self.patient.first_name, self.args.appt_date)
-        msg.send()
-
+        message = rapidsms.message.EmailMessage(connection=conn)
+        message.subject = "Appointment Followup"
+        t = Template("""Hello, {{ patient.first_name }}. You recently had a {{ args.appt_type }}.
+If you have any comments about your appointment, text your comment back to help us improve our service.
+If you missed your appointment and would like to reschedule, text me back a date.
+If you have no comments or don't want to reschedule, just ignore this message.""")
+        message.text =  t.render(Context({'patient': self.patient, 'args': self.args}))
+        message.send()
+        self.log_message(message.text, outgoing=True)
+        # set a timeout so that the message eventually ends
+        self.set_timeout(datetime.now() + timedelta(hours=4))
+        # and wait for a response
         self.state = 'awaiting_response'
 
+        return True # return True because we want this to continue
+
     def handle(self, message):
+        self.log_message(message.text, outgoing=False)
+        
         try:
             # execute our current state and get our new state from it
             self.state = self.state_dispatch[self.state](message)
@@ -50,30 +65,19 @@ If you'd like to reschedule, text me back a new date. If you'd like to cancel, t
 
     def AwaitingResponseState(self, message):
         text = message.text.strip().lower()
-        
-        # parse the message and determine the transition
-        if text == "cancel" or text == "no":
-            # they want to cancel their appointment, so let them know and don't do anything else
-            message.respond("Your appointment has been cancelled. You will be notified if you need to schedule a new appointment. Thank you!")
-            return None
 
         # attempt to parse a date out of the message
         p = pdt.Calendar()
         result = p.parse(text)
 
         if (result[1] == 0):
-            # we send them a "sorry" message...alternatively, we could throw an Unparseable
-            # and let some other state machine take a crack at it
-            message.respond("Sorry, I couldn't understand your input; please try again.")
-            return 'awaiting_response'
+            # assume this is a comment, thank them, and exit
+            message.text = "Thank you for your response!"
+            message.respond(message.text)
+            self.log_message(message.text, outgoing=True)
+            return None
         else:
             # the date they chose is in result[0]
-            reminder_date = p.parse("3 days ago", result[0])
-	    reminder_date_datetime = datetime.fromtimestamp(time.mktime(reminder_date[0]))
-            # schedule a task to remind them before that date and exit this machine for now
-            self.schedule_task("AppointmentReminder", reminder_date_datetime, arguments={
-                    'appt_date': datetime(result[0])
-                }.update(self.args))
-            message.respond("Thank you; your appointment is scheduled for %s.", datetime(result[0]))
+            self.reschedule(message, result[0])
             return None
         

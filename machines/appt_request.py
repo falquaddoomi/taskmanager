@@ -1,12 +1,19 @@
 import rapidsms
-import machine
+import machine, appt_machine
 
-from datetime import datetime
+from django.template import Context, Template
+
+from datetime import datetime, timedelta
 import time
 import parsedatetime.parsedatetime as pdt
 import parsedatetime.parsedatetime_consts as pdc
 
-class AppointmentRequestMachine(machine.BaseMachine):
+from taskmanager.models import *
+
+class AppointmentRequestMachine(appt_machine.BaseAppointmentMachine):
+    MAX_ATTEMPTS = 3
+    RESEND_IN_MINUTES = 2
+    
     def __init__(self, session, router, patient, args):
         super(AppointmentRequestMachine, self).__init__(session, router, patient, args)
 
@@ -16,23 +23,47 @@ class AppointmentRequestMachine(machine.BaseMachine):
             }
         self.state = 'idle'
 
-    def start(self):
+    # just sends out the default message
+    def send_request_msg(self):
         # we assume that we have a reference to the patient
         # send them a nice greeting message
         conn = rapidsms.connection.Connection(self.router.get_backend('email'), self.patient.address)
-        msg = rapidsms.message.EmailMessage(connection=conn)
-        msg.subject = "Appointment Schedule Request"
-        msg.text = """Hello, %s; you're due for a %s soon.
-If you'd like to schedule one now, text me back a date.
-Text back 'no' or ignore this message if you don't want to schedule anything now.
-        """ % (self.patient.first_name, self.args['appt_type'])
-        msg.send()
+        message = rapidsms.message.EmailMessage(connection=conn)
+        message.subject = "Appointment Schedule Request"
+        t = Template("""Hello, {{ patient.first_name }}; you're due for a {{ args.appt_type }} soon.
+Once you've scheduled an appointment with your care provider, text me back a date.
+Text back 'no' or 'cancel' if you don't want to schedule anything now.""")
+        message.text =  t.render(Context({'patient': self.patient, 'args': self.args}))
+        message.send()
+        self.log_message(message.text, outgoing=True)
 
+    def start(self):
+        self.attempts = 1
+        self.send_request_msg()
+        # set a timeout to repeat this action later
+        self.set_timeout(datetime.now() + timedelta(minutes=AppointmentRequestMachine.RESEND_IN_MINUTES))
+        # and wait for a response
         self.state = 'awaiting_response'
 
         return True # we handled it, thus return True
 
+    def timeout(self):
+        # check the number of attempts and see if we've gone over the maximum
+        # if not, resend...if we have, terminate
+        if self.attempts < AppointmentRequestMachine.MAX_ATTEMPTS:
+            self.attempts += 1
+            self.send_request_msg()
+            self.set_timeout(datetime.now() + timedelta(minutes=AppointmentRequestMachine.RESEND_IN_MINUTES)) # also reset the timeout
+            # if we return true, it clears the timeout; we return false because we're still handling it
+            return False
+        else:
+            # return None to indicate that the machine is done and should be removed
+            # FIXME: we may also want to raise a warning to the admin here
+            return None
+
     def handle(self, message):
+        self.log_message(message.text, outgoing=False)
+        
         try:
             # execute our current state and get our new state from it
             self.state = self.state_dispatch[self.state](message)
@@ -53,7 +84,8 @@ Text back 'no' or ignore this message if you don't want to schedule anything now
 
     def AwaitingResponseState(self, message):
         # parse the message and determine the transition
-        if message.text.strip().lower() == "no":
+        stripped_msg = message.text.strip().lower()
+        if stripped_msg == "no" or stripped_msg == "cancel" :
             # we shouldn't bother them anymore
             return None
 
@@ -64,26 +96,14 @@ Text back 'no' or ignore this message if you don't want to schedule anything now
         if (result[1] == 0):
             # we send them a "sorry" message...alternatively, we could throw an Unparseable
             # and let some other state machine take a crack at it
-            message.respond("Sorry, I couldn't understand your input; please try again.")
+            message.text = "Sorry, I couldn't understand your input; please try again."
+            message.respond(message.text)
+            self.log_message(message.text, outgoing=True)
+            # reset the timeout
+            self.set_timeout(datetime.now() + timedelta(hours=4))
             return 'awaiting_response'
         else:
             # the date they chose is in result[0]
-            appt_date_datetime = datetime.fromtimestamp(time.mktime(result[0]))
-            
-            reminder_date = p.parse("3 days ago", result[0])
-            reminder_date_datetime = datetime.fromtimestamp(time.mktime(reminder_date[0]))
-            
-            morning_reminder_date = p.parse("8am", result[0])
-            morning_reminder_datetime = datetime.fromtimestamp(time.mktime(morning_reminder_date[0]))
-
-            # schedule a task to remind them before that date
-            self.schedule_task("AppointmentReminderMachine", reminder_date_datetime, arguments={
-                    'appt_date': time.asctime(result[0])
-                }.update(self.args))
-            # schedule a task to remind them the morning of, too
-            self.schedule_task("AppointmentReminderMachine", morning_reminder_datetime, arguments={
-                    'appt_date': time.asctime(result[0])
-                }.update(self.args))
-            message.respond("Thank you; your %s is scheduled for %s. You'll be reminded on %s and the morning of the appointment." % (self.args['appt_type'], appt_date_datetime, reminder_date_datetime))
+            self.reschedule(message, result[0])
             return None
         

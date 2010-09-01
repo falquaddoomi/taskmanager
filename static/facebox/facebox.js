@@ -79,8 +79,8 @@
     settings: {
       opacity      : 0,
       overlay      : true,
-      loadingImage : '/facebox/loading.gif',
-      closeImage   : '/facebox/closelabel.gif',
+      loadingImage : '/static/taskmanager/facebox/loading.gif',
+      closeImage   : '/static/taskmanager/facebox/closelabel.gif',
       imageTypes   : [ 'png', 'jpg', 'jpeg', 'gif' ],
       faceboxHtml  : '\
     <div id="facebox" style="display:none;"> \
@@ -97,7 +97,7 @@
                 </div> \
                 <div class="footer"> \
                   <a href="#" class="close"> \
-                    <img src="/facebox/closelabel.gif" title="close" class="close_image" /> \
+                    <img src="/static/taskmanager/facebox/closelabel.gif" title="close" class="close_image" /> \
                   </a> \
                 </div> \
               </td> \
@@ -123,7 +123,7 @@
 
       $('#facebox').css({
         top:	getPageScroll()[1] + (getPageHeight() / 10),
-        left:	385.5
+        left:	450.5
       }).show()
 
       $(document).bind('keydown.facebox', function(e) {
