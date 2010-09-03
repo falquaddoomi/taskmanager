@@ -1,7 +1,7 @@
 import rapidsms
 import machine, appt_machine
 
-from django.template import Context, Template
+from django.template.loader import render_to_string
 
 from datetime import datetime, timedelta
 import parsedatetime.parsedatetime as pdt
@@ -28,11 +28,7 @@ class AppointmentFollowupMachine(appt_machine.BaseAppointmentMachine):
         conn = rapidsms.connection.Connection(self.router.get_backend('email'), self.patient.address)
         message = rapidsms.message.EmailMessage(connection=conn)
         message.subject = "Appointment Followup"
-        t = Template("""Hello, {{ patient.first_name }}. You recently had a {{ args.appt_type }}.
-If you have any comments about your appointment, text your comment back to help us improve our service.
-If you missed your appointment and would like to reschedule, text me back a date.
-If you have no comments or don't want to reschedule, just ignore this message.""")
-        message.text =  t.render(Context({'patient': self.patient, 'args': self.args}))
+        message.text =  render_to_string('tasks/appts/followup.html', {'patient': self.patient, 'args': self.args})
         message.send()
         self.log_message(message.text, outgoing=True)
         # set a timeout so that the message eventually ends

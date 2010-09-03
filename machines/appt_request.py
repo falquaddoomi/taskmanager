@@ -1,7 +1,7 @@
 import rapidsms
 import machine, appt_machine
 
-from django.template import Context, Template
+from django.template.loader import render_to_string
 
 from datetime import datetime, timedelta
 import time
@@ -12,7 +12,7 @@ from taskmanager.models import *
 
 class AppointmentRequestMachine(appt_machine.BaseAppointmentMachine):
     MAX_ATTEMPTS = 3
-    RESEND_IN_MINUTES = 2
+    RESEND_IN_HOURS = 24
     
     def __init__(self, session, router, patient, args):
         super(AppointmentRequestMachine, self).__init__(session, router, patient, args)
@@ -30,10 +30,7 @@ class AppointmentRequestMachine(appt_machine.BaseAppointmentMachine):
         conn = rapidsms.connection.Connection(self.router.get_backend('email'), self.patient.address)
         message = rapidsms.message.EmailMessage(connection=conn)
         message.subject = "Appointment Schedule Request"
-        t = Template("""Hello, {{ patient.first_name }}; you're due for a {{ args.appt_type }} soon.
-Once you've scheduled an appointment with your care provider, text me back a date.
-Text back 'no' or 'cancel' if you don't want to schedule anything now.""")
-        message.text =  t.render(Context({'patient': self.patient, 'args': self.args}))
+        message.text = render_to_string('tasks/appts/request.html', {'patient': self.patient, 'args': self.args})
         message.send()
         self.log_message(message.text, outgoing=True)
 
@@ -41,7 +38,7 @@ Text back 'no' or 'cancel' if you don't want to schedule anything now.""")
         self.attempts = 1
         self.send_request_msg()
         # set a timeout to repeat this action later
-        self.set_timeout(datetime.now() + timedelta(minutes=AppointmentRequestMachine.RESEND_IN_MINUTES))
+        self.set_timeout(datetime.now() + timedelta(minutes=AppointmentRequestMachine.RESEND_IN_HOURS))
         # and wait for a response
         self.state = 'awaiting_response'
 
@@ -53,7 +50,7 @@ Text back 'no' or 'cancel' if you don't want to schedule anything now.""")
         if self.attempts < AppointmentRequestMachine.MAX_ATTEMPTS:
             self.attempts += 1
             self.send_request_msg()
-            self.set_timeout(datetime.now() + timedelta(minutes=AppointmentRequestMachine.RESEND_IN_MINUTES)) # also reset the timeout
+            self.set_timeout(datetime.now() + timedelta(minutes=AppointmentRequestMachine.RESEND_IN_HOURS)) # also reset the timeout
             # if we return true, it clears the timeout; we return false because we're still handling it
             return False
         else:

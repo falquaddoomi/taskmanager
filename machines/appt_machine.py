@@ -1,7 +1,7 @@
 import rapidsms
 import machine
 
-from django.template import Context, Template
+from django.template.loader import render_to_string
 
 from datetime import datetime, timedelta
 import time
@@ -69,8 +69,10 @@ class BaseAppointmentMachine(machine.BaseMachine):
         followup_args.update(self.args) # pass on any arguments from the parent
         self.schedule_task("AppointmentFollowupMachine", followup_datetime, arguments=followup_args)
 
-        t = Template("""Thank you; your {{ args.appt_type }} is scheduled for {{ appt_date|date }}, {{ appt_date|time }}.
-You'll be reminded on {{ reminder_date|date }} and the morning of the appointment.""")
-        message.text =  t.render(Context({'patient': self.patient, 'args': self.args, 'appt_date': appt_datetime, 'reminder_date': reminder_datetime}))
+        message.text = render_to_string('tasks/appts/rescheduled.html', {
+            'patient': self.patient,
+            'args': self.args,
+            'appt_date': appt_datetime,
+            'reminder_date': reminder_datetime})
         message.respond(message.text)
         self.log_message(message.text, outgoing=True)

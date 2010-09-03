@@ -1,7 +1,7 @@
 import rapidsms
 import machine, appt_machine
 
-from django.template import Context, Template
+from django.template.loader import render_to_string
 
 from datetime import datetime, timedelta
 import parsedatetime.parsedatetime as pdt
@@ -29,17 +29,12 @@ class AppointmentReminderMachine(appt_machine.BaseAppointmentMachine):
         message = rapidsms.message.EmailMessage(connection=conn)
         message.subject = "Appointment Reminder"
         if 'nocancel' in self.args:
-            t = Template("""{% load parse_date %}Hello, {{ patient.first_name }}. You have an appointment {% if args.daybefore %}tomorrow{% else %}today{% endif %} at {{ args.appt_date|parse_date|time }}.
-{% if args.requires_fasting %}Please do not eat or drink anything (except water) for at least 9 hours before your test.{% endif %}""")
-            message.text =  t.render(Context({'patient': self.patient, 'args': self.args}))
+            message.text = render_to_string('tasks/appts/reminder_nocancel.html', {'patient': self.patient, 'args': self.args})
             message.send()
             self.log_message(message.text, outgoing=True)
             return None
         else:
-            t = Template("""{% load parse_date %}Hello, {{ patient.first_name }}. Just letting you know that you scheduled an appointment for {{ args.appt_date|parse_date|date }}, {{ args.appt_date|parse_date|time }}.
-You don't have to respond if you're ok with that date.
-If you'd like to reschedule, text me back a new date. If you'd like to cancel, text me back 'cancel' or 'no'.""")
-            message.text =  t.render(Context({'patient': self.patient, 'args': self.args}))
+            message.text =  render_to_string('tasks/appts/reminder.html', {'patient': self.patient, 'args': self.args})
             message.send()
             self.log_message(message.text, outgoing=True)
             # set a timeout so that the session eventually ends
