@@ -31,7 +31,9 @@
 	</head>
 
 	<body {% if section %}id="{{ section }}"{% endif %}>
-		<h1>{% block header %}{% endblock %}</h1>
+		<div id="context_switcher">
+			<h1>{% block header %}{% endblock %}</h1>
+		</div>
 
 		{% block content %}{% endblock %}
 	</body>

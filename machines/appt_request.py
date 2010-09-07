@@ -38,7 +38,7 @@ class AppointmentRequestMachine(appt_machine.BaseAppointmentMachine):
         self.attempts = 1
         self.send_request_msg()
         # set a timeout to repeat this action later
-        self.set_timeout(datetime.now() + timedelta(minutes=AppointmentRequestMachine.RESEND_IN_HOURS))
+        self.set_timeout(datetime.now() + timedelta(hours=AppointmentRequestMachine.RESEND_IN_HOURS))
         # and wait for a response
         self.state = 'awaiting_response'
 
@@ -50,7 +50,7 @@ class AppointmentRequestMachine(appt_machine.BaseAppointmentMachine):
         if self.attempts < AppointmentRequestMachine.MAX_ATTEMPTS:
             self.attempts += 1
             self.send_request_msg()
-            self.set_timeout(datetime.now() + timedelta(minutes=AppointmentRequestMachine.RESEND_IN_HOURS)) # also reset the timeout
+            self.set_timeout(datetime.now() + timedelta(hours=AppointmentRequestMachine.RESEND_IN_HOURS)) # also reset the timeout
             # if we return true, it clears the timeout; we return false because we're still handling it
             return False
         else:
