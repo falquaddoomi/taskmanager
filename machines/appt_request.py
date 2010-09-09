@@ -97,7 +97,7 @@ class AppointmentRequestMachine(appt_machine.BaseAppointmentMachine):
             message.respond(message.text)
             self.log_message(message.text, outgoing=True)
             # reset the timeout
-            self.set_timeout(datetime.now() + timedelta(hours=4))
+            self.set_timeout(datetime.now() + timedelta(hours=AppointmentRequestMachine.RESEND_IN_HOURS))
             return 'awaiting_response'
         else:
             # the date they chose is in result[0]

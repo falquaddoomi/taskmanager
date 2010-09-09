@@ -11,12 +11,24 @@ ul#tabnav li { /* do not change */
 	display: inline;
 }
 
-body#history li.tab1, body#processes li.tab2, body#tasks li.tab3, body#calendar li.tab4 { /* settings for selected tab */
+body#history li.tab1,
+body#processes li.tab2,
+body#tasks li.tab3,
+body#calendar li.tab4,
+body#templates li.tab1,
+body#messages li.tab2
+{ /* settings for selected tab */
 	border-bottom: 1px solid #fff; /* set border color to page background color */
 	background-color: #fff; /* set background color to match above border color */
 }
 
-body#history li.tab1 a, body#processes li.tab2 a, body#tasks li.tab3 a, body#calendar li.tab4 a { /* settings for selected tab link */
+body#history li.tab1 a,
+body#processes li.tab2 a,
+body#tasks li.tab3 a,
+body#calendar li.tab4 a,
+body#templates li.tab1 a,
+body#messages li.tab2 a
+{ /* settings for selected tab link */
 	background-color: #fff; /* set selected tab background color as desired */
 	color: #000; /* set selected tab link color as desired */
 	position: relative;
