@@ -82,8 +82,11 @@ class AppointmentRequestMachine(appt_machine.BaseAppointmentMachine):
     def AwaitingResponseState(self, message):
         # parse the message and determine the transition
         stripped_msg = message.text.strip().lower()
-        if stripped_msg == "no" or stripped_msg == "cancel" :
+        split_msg = stripped_msg.split()
+        
+        if "no" in split_msg or "cancel" in split_msg or "stop" in split_msg:
             # we shouldn't bother them anymore
+            Alert.objects.add_alert("Appointment Canceled", arguments=self.args, patient=self.patient)
             return None
 
         # attempt to parse a date out of the message
