@@ -20,29 +20,61 @@
 .alert_unknown_bg { background-color: #ccc; }
 .alert_unknown_light_bg { background-color: #eee; }
 
-.alert_exception { border-left: solid 30px #E3E383; }
-.alert_exception_light { border-left: solid 30px #F2F2C6; }
-.alert_error { border-left: solid 30px #E3B5B5; }
-.alert_error_light { border-left: solid 30px #F2DCDC; }
-.alert_generic { border-left: solid 30px #B5C9E3; }
-.alert_generic_light { border-left: solid 30px #D3DFEF; }
-.alert_info { border-left: solid 30px #BBE3B5; }
-.alert_info_light { border-left: solid 30px #E2F3DF; }
+.alert_tab {
+	background-image: url('/static/taskmanager/fugue/bonus/icons-24/exclamation.png');
+	background-repeat: no-repeat;
+	background-position: center center;
+	width: 45px;
+	left: 0px; top: 0px; bottom: 0px;
+	position: absolute;
+
+	-moz-border-radius: 5px 0px 0px 5px;
+	-webkit-border-radius: 5px 0px 0px 5px;
+	border-radius: 5px 0px 0px 5px;
+}
+.alert_body { }
+.alert_url {
+	background-image: url('/static/taskmanager/fugue/bonus/icons-24/chain.png');
+	background-repeat: no-repeat;
+	background-position: center center;
+	width: 45px;
+	right: 0px; top: 0px; bottom: 0px;
+	position: absolute;
+
+	background-color: #ddd;
+
+	-moz-border-radius: 0px 5px 5px 0px;
+	-webkit-border-radius: 0px 5px 5px 0px;
+	border-radius: 0px 5px 5px 0px;
+}
+.alert_url a {
+	width: 45px;
+	right: 0px; top: 0px; bottom: 0px;
+	position: absolute;
+}
+.alert_url:hover {
+	cursor: pointer;
+	background-color: #D3D3D3;
+}
+
+.alert_exception .alert_tab  { background-color: #E3E383; }
+.alert_error .alert_tab { background-color: #E3B5B5; }
+.alert_generic .alert_tab { background-color: #B5C9E3; }
+.alert_info .alert_tab { background-color: #BBE3B5;  }
 
 .alert_entry {
 	-moz-border-radius: 5px;
 	-webkit-border-radius: 5px;
 	border-radius: 5px;
 
+	position: relative;
+
 	background-color: #eee;
 
 	padding: 10px;
-	padding-left: 45px;
-	background-image: url('/static/taskmanager/fugue/bonus/icons-24/exclamation.png');
-	background-repeat: no-repeat;
-	background-position: 10px center;
+	padding-left: 55px;
 
-	margin-bottom: 1em;
+	margin-bottom: 0.5em;
 	margin-right: 10px;
 }
 .alert_title { margin-bottom: 5px; font-weight: bold; }

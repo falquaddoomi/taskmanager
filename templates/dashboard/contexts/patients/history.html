@@ -35,7 +35,7 @@
 						{% for session in process.get_sessions %}
 						<div class="history_item {{ session.get_status }}_light">
 							<div class="history_session_header">
-								<a href="/taskmanager/sessions/{{ session.id }}/details/" class="history_task_link" rel="facebox">
+								<a name="session_{{ session.id }}" href="/taskmanager/sessions/{{ session.id }}/details/" class="history_task_link" rel="facebox">
 									<b>{{ session.task.name }}</b>
 									<span class="history_session_date">ran on {{ session.add_date|date }}, {{ session.add_date|time }}</span>
 								</a>

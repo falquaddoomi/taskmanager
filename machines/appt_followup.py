@@ -73,6 +73,8 @@ class AppointmentFollowupMachine(appt_machine.BaseAppointmentMachine):
             message.respond(message.text)
             self.log_message(message.text, outgoing=True)
             alert_data = {'feedback': their_message}
+            if self.patient and self.session:
+                alert_data['url'] = '/taskmanager/patients/%d/history/#session_%d' % (self.patient.id, self.session.id)
             alert_data.update(self.args)
             Alert.objects.add_alert("Appointment Feedback", arguments=alert_data, patient=self.patient)
             return None
